@@ -159,12 +159,15 @@ function fallOver(component) {
 	var angle = getAngle(matrix);
 
 	if(Math.abs(Math.cos(angle)) % .99 < .01 || Math.abs(Math.sin(angle)) % .99 < .01) {
-		//Find the nearest angle
+		//~Equilibrium. Rotate it to the nearest multiple of pi/2
 		var nearestAngle = (Math.round((angle + Math.PI/2) / (Math.PI/2)) - 1)*Math.PI/2
 		rotateToAngle(component, nearestAngle);
-		return; //equilibrium
+		return;
 	}
 
+	$component = $(component);
+	var previousTransition = $component.css("transition");
+	var speed = .25*Math.abs(Math.sin(angle));
 	$component.css("transition", "all "+(.25*Math.abs(Math.sin(angle)))+"s "+"ease-in");
 
 	if(Math.cos(angle) < 0) {
@@ -172,6 +175,8 @@ function fallOver(component) {
 	} else {
 		rotateToAngle(component, 0);
 	}
+
+	setTimeout(function() { $component.css("transition", previousTransition); }, speed*1000);
 }
 
 /**
