@@ -7,6 +7,8 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+//I was hoping you'd look at this :)
+
 var animations = [];
 
 /**
@@ -76,7 +78,6 @@ function changeTransformOrigin(component, newOrigin) {
 
 	$component.css("transform-origin", newOrigin);
 	$component.css("transform", toCSSMatrix(newCoords));
-	console.log(toCSSMatrix(newCoords));
 
 	//Hack to get browser to repaint component before re-enabling transitions
 	var currentDisplay = $component.css("display");
@@ -110,7 +111,7 @@ function dotProduct(first, second) {
  * @param (DOM Node) component the component for which to enable gravity
  * @param gravity the "acceleration due to gravity"
  */ 
-function enableGravity(component, gravity) {
+function enableGravity(component, gravity, fallForever) {
 	$component = $(component);
 	if(gravity === undefined) {
 		gravity = 9800; //TODO: use this variable
@@ -121,7 +122,7 @@ function enableGravity(component, gravity) {
 	var cos = Math.cos(angle);
 	sin = fixRoundingErrors(sin);
 	cos = fixRoundingErrors(cos);
-	console.log(sin, cos);
+
 	var bottomMostPoint = "";
 	if(sin < 0) {
 		bottomMostPoint = "100% ";
@@ -137,16 +138,16 @@ function enableGravity(component, gravity) {
 	} else {
 		bottomMostPoint += "0%";
 	}
-	$component.css("transition", "all "+.3+"s "+"cubic-bezier(.56, .09, .93, .85)");
+	$component.css("transition", "all "+.4+"s "+"cubic-bezier(.56, .09, .93, .85)");
 	changeTransformOrigin(component, bottomMostPoint);
-	moveToPoint(component, "current", $(window).height());
+	moveToPoint(component, "current", $(window).height()+$(document).scrollTop());
 
 	//Hack to get browser to repaint component before re-enabling transitions
 	var currentDisplay = $component.css("display");
 	$component.css("display", "none");
 	$component.css("display", currentDisplay);
 
-	setTimeout(function() { fallOver(component); }, 310);
+	setTimeout(function() { fallOver(component); }, 420);
 }
 
 /**
@@ -157,8 +158,10 @@ function fallOver(component) {
 	var matrix = getMatrix(component);
 	var angle = getAngle(matrix);
 
-	if(Math.abs(Math.cos(angle)) % .999 < .001 || Math.abs(Math.sin(angle)) % .999 < .001) {
-		rotateToAngle(component, -Math.PI/2);
+	if(Math.abs(Math.cos(angle)) % .99 < .01 || Math.abs(Math.sin(angle)) % .99 < .01) {
+		//Find the nearest angle
+		var nearestAngle = (Math.round((angle + Math.PI/2) / (Math.PI/2)) - 1)*Math.PI/2
+		rotateToAngle(component, nearestAngle);
 		return; //equilibrium
 	}
 
@@ -180,9 +183,7 @@ function fallOver(component) {
  * @return the fix number
  */
 function fixRoundingErrors(number) {
-	if(Math.abs(number) < 1e-6) {
-		return 0;
-	} else if(Math.abs(number) > .99999) {
+	if(Math.abs(number) % .99999 < .000001) {
 		return Math.round(number);
 	} else {
 		return number;
@@ -261,7 +262,6 @@ function moveToPoint(component, left, top) {
 
 	//Difference in the rotated coordinate system
 	var dOrigin = rotateMatrix([[dxOriginRect, dyOriginRect, 1]], -angle);
-	console.log(dOrigin);
 
 	//The unrotated, absolute offset of the transformation origin
 	var originOffsetLeft = centroidLeft + dOrigin[0][0];
@@ -333,9 +333,17 @@ function parseMatrix(cssMatrix) {
 	cssMatrix = cssMatrix.substring(cssMatrix.indexOf("(")+1,cssMatrix.length-1).split(",");
 	var matrix = [[],[],[]];
 	var values = cssMatrix.map(function(val) { return parseFloat(val.trim()); });
-	for(var i=0; i<values.length; i++) {
-		//The first index is the column, the second is the row
-		matrix[Math.floor(i/2)][i%2] = (Math.abs(values[i]) < 1e-10 ? 0 : values[i]);
+	if(values.length < 6) {
+		//No transformation matrix. Give it the identity
+		for(var i=0; i < 6; i++) {
+			var value = ((i === 0 || i === 3) ? 1 : 0);
+			matrix[Math.floor(i/2)][i%2] = value;
+		}
+	} else {
+		for(var i=0; i<values.length; i++) {
+			//The first index is the column, the second is the row
+			matrix[Math.floor(i/2)][i%2] = fixRoundingErrors(values[i]);
+		}
 	}
 	matrix[0][2] = 0;
 	matrix[1][2] = 0;
