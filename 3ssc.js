@@ -94,6 +94,7 @@ function changeTransformOrigin(component, newOrigin) {
  * @param second the second vector
  *
  * @return the dot product of the two vector arrays
+ * Note: the vector arrays are not modified
  */
 function dotProduct(first, second) {
 	var result = 0;
@@ -110,11 +111,15 @@ function dotProduct(first, second) {
  *
  * @param (DOM Node) component the component for which to enable gravity
  * @param gravity the "acceleration due to gravity"
+ * @param (boolean) fallToBottomOfPage true to fall to the bottom of the document,
+ *     false to fall to the bottom of the window
+ *
+ * @return (number) the time taken to fall in msec
  */ 
-function enableGravity(component, gravity, fallForever) {
+function enableGravity(component, gravity, fallToBottomOfPage) {
 	$component = $(component);
 	if(gravity === undefined) {
-		gravity = 9800; //TODO: use this variable
+		gravity = 7500; //TODO: use this variable
 	}
 	var matrix = getMatrix(component);
 	var angle = getAngle(matrix);
@@ -138,16 +143,26 @@ function enableGravity(component, gravity, fallForever) {
 	} else {
 		bottomMostPoint += "0%";
 	}
-	$component.css("transition", "all "+.4+"s "+"cubic-bezier(.56, .09, .93, .85)");
 	changeTransformOrigin(component, bottomMostPoint);
-	moveToPoint(component, "current", $(window).height()+$(document).scrollTop());
+
+
+	if(fallToBottomOfPage === true) {
+		var bottomOfScreen = $(document).height();
+	} else {
+		var bottomOfScreen = $(window).height()+$(document).scrollTop();
+	}
+	var componentRect = component.getBoundingClientRect();
+	var fallDistance = bottomOfScreen - (componentRect.top + componentRect.height);
+	var time = .4;Math.sqrt(2*fallDistance/gravity);
+	$component.css("transition", "all "+time+"s "+"cubic-bezier(.56, .09, .93, .85)");
+	moveToPoint(component, "current", bottomOfScreen);
 
 	//Hack to get browser to repaint component before re-enabling transitions
 	var currentDisplay = $component.css("display");
 	$component.css("display", "none");
 	$component.css("display", currentDisplay);
-
-	setTimeout(function() { fallOver(component); }, 420);
+	setTimeout(function() { fallOver(component); }, time*1000+50);
+	return time*1000;
 }
 
 /**
@@ -159,24 +174,27 @@ function fallOver(component) {
 	var angle = getAngle(matrix);
 
 	if(Math.abs(Math.cos(angle)) % .99 < .01 || Math.abs(Math.sin(angle)) % .99 < .01) {
-		//~Equilibrium. Rotate it to the nearest multiple of pi/2
-		var nearestAngle = (Math.round((angle + Math.PI/2) / (Math.PI/2)) - 1)*Math.PI/2
+		//Equilibrium. Rotate it to the nearest multiple of pi/2
+		var time = .25;
+		$component.css("transition", "all "+time+"s "+"cubic-bezier(.56, .09, .93, .85)");
+		var nearestAngle = Math.round(angle / (Math.PI/2))*Math.PI/2;
+		var newTransformOrigin = (Math.sin(angle) >= 0 ? "100% " : "0% ") + "50%";
 		rotateToAngle(component, nearestAngle);
-		return;
-	}
-
-	$component = $(component);
-	var previousTransition = $component.css("transition");
-	var speed = .25*Math.abs(Math.sin(angle));
-	$component.css("transition", "all "+(.25*Math.abs(Math.sin(angle)))+"s "+"ease-in");
-
-	if(Math.cos(angle) < 0) {
-		rotateToAngle(component, Math.PI);
 	} else {
-		rotateToAngle(component, 0);
-	}
+		$component = $(component);
+		var previousTransition = $component.css("transition");
+		var time = Math.min(1/(2-Math.abs(Math.sin(angle)))/4, .4);
+		$component.css("transition", "all "+time+"s "+"cubic-bezier(.56, .09, .93, .85)");
 
-	setTimeout(function() { $component.css("transition", previousTransition); }, speed*1000);
+		if(Math.cos(angle) < 0) {
+			rotateToAngle(component, Math.PI);
+			// var newTransformOrigin = "50% 0%";
+		} else {
+			rotateToAngle(component, 0);
+			// var newTransformOrigin = "50% 100%";
+		}
+	}
+	setTimeout(function() { $component.css("transition", previousTransition); }, time*1000+300);
 }
 
 /**
@@ -188,7 +206,7 @@ function fallOver(component) {
  * @return the fix number
  */
 function fixRoundingErrors(number) {
-	if(Math.abs(number) % .99999 < .000001) {
+	if(Math.abs(number - Math.round(number)) < 1e-6) {
 		return Math.round(number);
 	} else {
 		return number;
@@ -381,7 +399,7 @@ function rotateMatrix(matrix, angle) {
  */
 function rotateMatrixNoTranslate(matrix, angle) {
 	var toRotate = $.extend(true, [], matrix);
-	setTranslate(toRotate, 0, 0);
+	var toRotate = setTranslate(toRotate, 0, 0);
 	var rotated = rotateMatrix(toRotate, angle);
 	var originalTranslate = getTranslation(matrix);
 	return translateMatrix(rotated, originalTranslate[0], originalTranslate[1]);
@@ -403,8 +421,27 @@ function rotateToAngle(component, angle) {
 }
 
 /**
+ * Sets the rotation of a transformation matrix
+ *
+ * @param matrix the [col][row] matrix to rotate
+ * @param angle the new angle in radians
+ *
+ * @return a matrix translated to (x, y)
+ * Note: the original matrix is unmodified
+ */
+function setRotate(matrix, angle) {
+	var rotated = $.extend(true, [], matrix); //deep copy of matrix
+	rotated[0][0] = Math.cos(angle);
+	rotated[1][1] = Math.cos(angle);
+	rotated[1][0] = -Math.sin(angle);
+	rotated[0][1] = Math.sin(angle);
+	return rotated;
+}
+
+/**
  * Sets the translate of a transformation matrix
  *
+ * @param matrix the [col][row] transformation matrix to translate
  * @param x the new x translate
  * @param y the new y translate
  *
@@ -413,9 +450,9 @@ function rotateToAngle(component, angle) {
  */
 function setTranslate(matrix, x, y) {
 	var translated = $.extend(true, [], matrix); //deep copy of matrix
-	matrix[2][0] = x;
-	matrix[2][1] = y;
-	return matrix;
+	translated[2][0] = x;
+	translated[2][1] = y;
+	return translated;
 }
 
 /**
