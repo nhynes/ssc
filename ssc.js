@@ -331,6 +331,8 @@
 
             _setPrefixedStyle( elem, 'transform', this.toTransformMatrix() );
             _setPrefixedStyle( elem, 'transformOrigin', this.getOrigin() );
+
+            return this;
         }
     };
 
@@ -359,8 +361,8 @@
         origin[2] = origin[2] || 0; // set the initial z
 
         if ( transform && transform !== 'none' ) {
-            cssMatrix = transform.substring( transform.indexOf( '( ' ) + 1, transform.length - 1 );
-            cssMatrix = cssMatrix.split( ', ' )
+            cssMatrix = transform.substring( transform.indexOf('(') + 1, transform.length - 1 );
+            cssMatrix = cssMatrix.split(', ')
                 .map( function( entry ) {
                     return _truncate( parseFloat( entry ), 2 );
                 });

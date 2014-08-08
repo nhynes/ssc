@@ -24,6 +24,16 @@ QUnit.test( 'getting the initial transformation parameters', function( assert ) 
         'initial transform should be the 3D identity' );
 });
 
+QUnit.test( 'getting the transformation parameters of a transformed element', function( assert ) {
+    var matrix = ssc('#test').apply();
+    var newMatrix = ssc('#test');
+
+    assert.strictEqual( newMatrix.toTransformMatrix(),
+        'matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)',
+        'null transformation of identity should return identity matrix3d' );
+});
+
+
 QUnit.test( 'translations', function( assert ) {
     var matrix = ssc('#test');
 
