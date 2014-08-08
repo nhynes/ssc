@@ -1,530 +1,361 @@
-/*
-Copyright (C) 2013 Nick Hynes
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+(function( factory ) {
+    if ( typeof define === 'function' && define.amd ) {
+        define(function() {
+            return factory();
+        });
+    } else {
+        window.ssc = factory();
+    }
+})(function() {
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+    // {{ Utilities
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
+    function _getElem( elem ) {
+        if ( !(elem instanceof Element) ) {
+            if ( typeof elem === 'string' ) {
+                elem = document.querySelector( elem );
+                if ( !elem ) { throw( Error('elem selector does not refer to a valid Element') ); }
+            } else { throw( Error('elem must be either an Element or a CSS Selector') ); }
+        }
+        return elem;
+    }
 
-var animations = [];
+    function _truncate( number, decimalPlaces ) {
+        var exp = Math.pow( 10, decimalPlaces );
+        return Math.round( number *  exp ) / exp;
+    }
 
-/**
- * Calculates the arithmetic-geometric mean of two numbers
- *
- * @param a0 the first number
- * @param g0 the second number
- *
- * @return the AGM of the two numbers
- */
-function agm(a0, g0, precision) {
-	if(precision === undefined) {
-		precision = 5;
-	}
-	var a1 = (a0+g0)/2;
-	var g1 = Math.sqrt(a0*g0);
-	if(precision === 0) {
-		return (a1+g1)/2;
-	}
-	return agm(a1, g1, precision-1);
-}
+    function _cloneMatrix( matrix ) {
+        var clonedMatrix = [];
+        matrix.map( function( entry ) {
+            var clonedEntry;
+            if ( entry instanceof Array ) {
+                clonedEntry = [];
+                entry.map( function( col ) { clonedEntry.push( col ); });
+            } else {
+                clonedEntry = entry;
+            }
+            clonedMatrix.push( clonedEntry );
+        });
+        return clonedMatrix;
+    }
 
-/**
- * Changes the transform origin of a component while maintaining
- * current position
- * @param (DOM Node) component the component for which to change the transform origin
- * @param ("percent|length percent|length") newOrigin the new transfor origin
- * TODO: make this function use qualitative strings as inputs
- */
-function changeTransformOrigin(component, newOrigin) {
-	var $component = $(component);
+    function _padVector( array, length, padding ) {
+        var paddedVector = [];
+        length = length || 3;
+        padding = ( arguments.length >= 3 ? padding : 0 );
+        for( var i = 0; i < length; i++ ) {
+            paddedVector.push( ( (array[ i ] || array[ i ] === 0) ? array[ i ] : padding ) );
+        }
+        return paddedVector;
+    }
 
-	var oldOrigin = $component.css("transform-origin");
-	var currentTransform = getMatrix(component);
+    function _parseArgs( args, padLen, padWith ) {
+        // parses up to three arguments since there are only three dimensions
+        args = Array.prototype.slice.call(args);
+        var toParse = ( args[0] instanceof Array ? args[0] : args ).slice( 0, 3 );
+        return _padVector( toParse, padLen, padWith );
+    }
 
-	var newOriginComponents = newOrigin.split(" ");
-	var newOriginLeft = parseInt(newOriginComponents[0]);
-	//Convert from % to px
-	if(newOriginComponents[0].indexOf("%") !== -1) { 
-		newOriginLeft *= $component.width()/100;
-	}
-	var newOriginTop = parseInt(newOriginComponents[1]);
-	if(newOriginComponents[1].indexOf("%") !== -1) { 
-		newOriginTop *= $component.height()/100;
-	}
+    function _zip() {
+        var arrays = Array.prototype.slice.call(arguments);
+        var minLenArray = arrays.reduce( function( minLen, array ) {
+            return ( minLen.length < array.length ? minLen : array );
+        });
+        return minLenArray.map( function( _, index ) {
+            return arrays.map( function( array ) {
+                return array[ index ];
+            });
+        });
+    }
 
-	var oldOriginLeft = parseInt(oldOrigin.split(" ")[0]);
-	var oldOriginTop = parseInt(oldOrigin.split(" ")[1]);
+    var VENDORS = [ 'Moz', 'webkit', 'ms', 'O' ];
+    function _setPrefixedStyle( elem, propName, value ) {
+        var capitalizedPropName = propName.charAt(0).toUpperCase() + propName.slice(1);
+        VENDORS.map( function( vendor ) {
+            elem.style[ vendor + capitalizedPropName ] = value;
+            elem.style.propName = value;
+        }, undefined );
+    }
 
-	var angle = getAngle(currentTransform);
-	var rotatedOldCoords = rotateMatrix([[oldOriginLeft, oldOriginTop, 1]], -angle);
-	var rotatedNewCoords = rotateMatrix([[newOriginLeft, newOriginTop, 1]], -angle);
+    function _getPrefixedStyle( elem, propName ) {
+        propName = propName.replace( /[A-Z]/g, function( match ) {
+            return '-' + match.toLowerCase();
+        });
+        propName = propName.toLowerCase();
+        var styles = window.getComputedStyle( elem );
+        var vendorValue;
+        VENDORS.map( function( vendor ) {
+            vendorValue = styles[ '-' + vendor + '-' + propName ] || vendorValue;
+        }, undefined );
+        return styles[ propName ] || vendorValue;
+    }
 
-	//Find the distance in an unrotated coordinate system
-	var dx = oldOriginLeft - newOriginLeft;
-	var dy = oldOriginTop - newOriginTop;
+    // }}
 
-	//Find the distance in the rotated coordinate system
-	var dxPrime = rotatedNewCoords[0][0] - rotatedOldCoords[0][0];
-	var dyPrime = rotatedNewCoords[0][1] - rotatedOldCoords[0][1];
+    /**
+      * Represents a matrix3d in row-major order
+      */
+    function CSSMatrix( matrix, origin, elem ) {
+        console.log( origin );
+        this._matrix = matrix;
+        this._origin = origin;
+        this._elem = elem;
+        this._elemRect = elem.getBoundingClientRect();
+    }
 
-	//Calculate the new translation
-	var newCoords = translateMatrix(currentTransform, dx+dxPrime, dy+dyPrime);
+    /**
+      * Returns a copy of this CSS matrix
+      */
+    CSSMatrix.prototype.clone = function() {
+        return new CSSMatrix( _cloneMatrix( this.matrix ), this.origin, this._elem );
+    };
 
-	var originalTransition = $component.css("transition");
-	$component.css("transition","none");;
+    /**
+      * Returns a copy of this matrix translated by <dx, dy, dz>
+      * Arguments can be either a vector (e.g. [ x, y, z ]) or scalars.
+      * Unspecified arguments default to zero.
+      */
+    CSSMatrix.prototype.translate = function() {
+        var translateBy = _parseArgs( arguments );
+        var currentTranslate = this.getTranslate();
+        return this.setTranslate( _zip( currentTranslate, translateBy ).map( function( vects ) {
+            return ( vects[1] !== undefined ? vects[0] + vects[1] : 0 );
+        }) );
+    };
 
-	$component.css("transform-origin", newOrigin);
-	$component.css("transform", toCSSMatrix(newCoords));
+    /**
+      * Translates the matrix to <x, y, z>
+      * Arguments can be either a vector (e.g. [ x, y, z ]) or scalars.
+      * Unspecified arguments default to zero.
+      */
+    CSSMatrix.prototype.setTranslate = function() {
+        var translateVector = _parseArgs( arguments );
+        var translatedMatrix = _cloneMatrix( this._matrix );
+        translateVector.map( function( elem, index ) {
+            translatedMatrix[ index ][ 3 ] = elem;
+        });
+        return new CSSMatrix( translatedMatrix, this._origin, this._elem );
+    };
 
-	//Hack to get browser to repaint component before re-enabling transitions
-	var currentDisplay = $component.css("display");
-	$component.css("display", "none");
-	$component.css("display", currentDisplay);
+    /**
+      * Returns the current translation represented by this matrix: [ x, y, z ]
+      */
+    CSSMatrix.prototype.getTranslate = function() {
+        return [
+            this._matrix[0][3],
+            this._matrix[1][3],
+            this._matrix[2][3]
+        ];
+    };
 
-	$component.css("transition", originalTransition);
-}
+    /**
+      * Returns a copy of this matrix scaled by <dx, dy, dz>
+      * Arguments can be either a vector (e.g. [ x, y, z ]) or scalars.
+      * Unspecified arguments default to one.
+      */
+    CSSMatrix.prototype.scale = function() {
+        var scaleVector = _parseArgs( arguments, 4, 1 );
+        var scaleMatrix = [
+            [ scaleVector[0], 0, 0, 0 ],
+            [ 0, scaleVector[1], 0, 0 ],
+            [ 0, 0, scaleVector[2], 0 ],
+            [ 0, 0, 0, 1 ]
+        ];
+        return new CSSMatrix( scaleMatrix, this._origin, this._elem ).multiply( this._matrix );
+    };
 
-/**
- * Returns the dot product of two vectors arrays
- *
- * @param first the first vector
- * @param second the second vector
- *
- * @return the dot product of the two vector arrays
- * Note: the vector arrays are not modified
- */
-function dotProduct(first, second) {
-	var result = 0;
-	var minLenVector = Math.min(first.length, second.length);
-	for(var i=0; i < minLenVector; i++) {
-		result += first[i]*second[i];
-	}
-	return (Math.abs(result) < 1e-10 ? 0 : result);
-}
+    /**
+      * Returns a copy of this matrix scaled to x, y, z
+      * Arguments can be either a vector (e.g. [ x, y, z ]) or scalars.
+      * Unspecified arguments default to zero.
+      */
+    CSSMatrix.prototype.setScale = function() {
+        var scaleVector = _parseArgs( arguments, 4, 1 );
+        var scaledMatrix = _cloneMatrix( this._matrix );
+        scaleVector.map( function( elem, index ) {
+            scaledMatrix[ index ][ index ] = elem;
+        });
+        return new CSSMatrix( scaledMatrix, this._origin, this._elem );
+    };
 
-/**
- * Changes the transform origin of the component to the bottom-most point,
- * moves the component to the bottom of the screen, and then makes it fall over
- *
- * @param (DOM Node) component the component for which to enable gravity
- * @param gravity the "acceleration due to gravity"
- * @param (boolean) fallToBottomOfPage true to fall to the bottom of the document,
- *     false to fall to the bottom of the window
- *
- * @return (number) the time taken to fall in msec
- */ 
-function enableGravity(component, gravity, fallToBottomOfPage) {
-	$component = $(component);
-	if(gravity === undefined) {
-		gravity = 7500; //TODO: use this variable
-	}
-	var matrix = getMatrix(component);
-	var angle = getAngle(matrix);
-	var sin = Math.sin(angle);
-	var cos = Math.cos(angle);
-	sin = fixRoundingErrors(sin);
-	cos = fixRoundingErrors(cos);
+    /**
+      * Returns the current scale represented by this matrix: [ x, y, z ]
+      */
+    CSSMatrix.prototype.getScale = function() {
+        return [
+            this._matrix[0][0],
+            this._matrix[1][1],
+            this._matrix[2][2]
+        ];
+    };
 
-	var bottomMostPoint = "";
-	if(sin < 0) {
-		bottomMostPoint = "100% ";
-	} else if(sin > 0) {
-		bottomMostPoint = "0% ";
-	} else {
-		bottomMostPoint = "50% ";
-	}
-	if(cos === 0) {
-		bottomMostPoint += "50%";
-	} else if(cos > 0) {
-		bottomMostPoint += "100%";
-	} else {
-		bottomMostPoint += "0%";
-	}
-	changeTransformOrigin(component, bottomMostPoint);
+    /**
+      * Changes the transformation origin while maintaining the current transform relative to
+      * the screen.
+      * Values of x and y are relative to the untransformed bounding box.
+      *
+      * Arguments are specified in pixels, keywords, or percents and can be an array or positional.
+      * Unspecified arguments default to the previous value.
+      */
+    CSSMatrix.prototype.changeOrigin = function() {
+        var newOrigin = [];
+        if ( typeof arguments[0] === 'string' ) {
+            arguments[0].split(' ').map( function( component, index, components ) {
+                if ( component.indexOf('%') !== -1 ) {
+                    var dimension = ( index === 0 ?
+                        this._elemRect.width : this._elemRect.height );
+                    newOrigin[ index ] = dimension * parseFloat( component ) / 100;
+                } else {
+                    switch( component.toLowerCase() ) {
+                        case 'left':
+                            newOrigin[0] = 0;
+                            break;
+                        case 'right':
+                            newOrigin[0] = this._elemRect.width;
+                            break;
+                        case 'top':
+                            newOrigin[1] = 0;
+                            break;
+                        case 'bottom':
+                            newOrigin[1] = this._elemRect.height;
+                            break;
+                        case 'center':
+                            if ( components.length === 1 ) {
+                                newOrigin = [ this._elemRect.width / 2, this._elemRect.height / 2 ];
+                            } else {
+                                if ( index === 0 ) { newOrigin[0] = this._elemRect.width / 2; }
+                                else { newOrigin[1] = this._elemRect.height / 2; }
+                            }
+                            break;
+                        default:
+                            newOrigin[2] = parseInt( component, 10 );
+                    }
+                }
+            }, this );
+        } else {
+            newOrigin = _parseArgs( arguments, 3, undefined );
+        }
+        newOrigin[2] = newOrigin[2] || 0;
 
+        var delta = _zip( this._origin, newOrigin ).map( function( components ) {
+            return ( components[1] !== undefined ? components[1] - components[0] : 0 );
+        });
 
-	if(fallToBottomOfPage === true) {
-		var bottomOfScreen = $(document).height();
-	} else {
-		var bottomOfScreen = $(window).height()+$(document).scrollTop();
-	}
-	var componentRect = component.getBoundingClientRect();
-	var fallDistance = bottomOfScreen - (componentRect.top + componentRect.height);
-	var time = .4;Math.sqrt(2*fallDistance/gravity);
-	$component.css("transition", "all "+time+"s "+"cubic-bezier(.56, .09, .93, .85)");
-	moveToPoint(component, "current", bottomOfScreen);
+        console.log( this._origin, newOrigin );
 
-	//Hack to get browser to repaint component before re-enabling transitions
-	var currentDisplay = $component.css("display");
-	$component.css("display", "none");
-	$component.css("display", currentDisplay);
-	setTimeout(function() { fallOver(component); }, time*1000+50);
-	return time*1000;
-}
+        this._origin = _zip( this._origin, newOrigin ).map( function( components ) {
+            return ( components[1] !== undefined ? components[1] : components[0] );
+        });
 
-/**
- * Makes a component fall in the direction it's leaning or stay at equilibrium
- * @param (DOM Node) component the component to have fall over
- */
-function fallOver(component) {
-	var matrix = getMatrix(component);
-	var angle = getAngle(matrix);
+        console.log( this.getOrigin(), delta );
 
-	if(Math.abs(Math.cos(angle)) % .99 < .01 || Math.abs(Math.sin(angle)) % .99 < .01) {
-		//Equilibrium. Rotate it to the nearest multiple of pi/2
-		var time = .25;
-		$component.css("transition", "all "+time+"s "+"cubic-bezier(.56, .09, .93, .85)");
-		var nearestAngle = Math.round(angle / (Math.PI/2))*Math.PI/2;
-		var newTransformOrigin = (Math.sin(angle) >= 0 ? "100% " : "0% ") + "50%";
-		rotateToAngle(component, nearestAngle);
-	} else {
-		$component = $(component);
-		var previousTransition = $component.css("transition");
-		var time = Math.min(1/(2-Math.abs(Math.sin(angle)))/4, .4);
-		$component.css("transition", "all "+time+"s "+"cubic-bezier(.56, .09, .93, .85)");
+        return this; //.translate( delta );
+    };
 
-		if(Math.cos(angle) < 0) {
-			rotateToAngle(component, Math.PI);
-			// var newTransformOrigin = "50% 0%";
-		} else {
-			rotateToAngle(component, 0);
-			// var newTransformOrigin = "50% 100%";
-		}
-	}
-	setTimeout(function() { $component.css("transition", previousTransition); }, time*1000+300);
-}
+    /**
+      * Multiplies the CSS matrix by a given matrix; preferably a 4xn matrix.
+      */
+    CSSMatrix.prototype.multiply = function( otherMatrix ) {
+        var otherMatrixT;
+        if ( otherMatrix[0].length ) {
+            otherMatrixT = _zip.apply( this, otherMatrix );
+        } else {
+            otherMatrixT = [ otherMatrix ];
+        }
 
-/**
- * Makes a number 0 or +/- 1 if it's close enough.
- * Useful when sin and cos return ~0 or +/-1 and it'd be helpful if they were.
- *
- * @param the number to fix
- *
- * @return the fix number
- */
-function fixRoundingErrors(number) {
-	if(Math.abs(number - Math.round(number)) < 1e-6) {
-		return Math.round(number);
-	} else {
-		return number;
-	}
-}
+        var multipliedMatrix = this._matrix.map( function( row ) {
+            return otherMatrixT.map( function( col ) {
+                return _zip( row, col )
+                    .map( function( components ) { return components[0] * components[1]; })
+                    .reduce( function( sum, val ) { return sum + val; }, 0 );
+            });
+        });
 
-/**
- * Returns the transformation angle of the matrix
- *
- * @param matrix the [col][row] matrix from which to get the angle
- *
- * @return the transformation angle of the matrix (0 <= angle <= 2pi)
- */
-function getAngle(matrix) {
-	var currentAngle = Math.atan2(-matrix[0][1], matrix[0][0]);
-	if(currentAngle < 0) {
-		currentAngle += Math.PI*2;
-	}
-	return currentAngle;
-}
+        return new CSSMatrix( multipliedMatrix, this._origin, this._elem );
+    };
 
-/**
- * Returns the transformation matrix of a component
- * Convenience function for getting the transform of a
- * component and parsing the matrix.
- *
- * @param (DOM Node) component the component for which to get the transform matrix
- *
- * @return the [col][row] matrix representing the component's transform
- */
-function getMatrix(component) {
-	return parseMatrix($(component).css("transform"));
-}
+    /**
+      * Params:
+      * elem {String|Element} - Takes an element or a CSS selector for an element and returns a
+                                CSSMatrix
+      *
+      * Returns a CSSMatrix
+      */
+    function getMatrix( elem ) {
+        elem = _getElem( elem );
 
-/**
- * Returns the x and y translations of a CSS2D matrix
- *
- * @param matrix the [col][row] matrix from which to get the translation
- *
- * @return [x, y] representing the translate component of the transform
- */
-function getTranslation(matrix) {
-	return [matrix[2][0], matrix[2][1]];
-}
+        var cssMatrix;
+        var matrix = [
+            [ 1, 0, 0, 0 ],
+            [ 0, 1, 0, 0 ],
+            [ 0, 0, 1, 0 ],
+            [ 0, 0, 0, 1 ]
+        ];
+        var origin; // [ x, y, z ]
 
-/**
- * Translates a component's transform origin to a given
- * on-screen, absolute, 2D coordinate
- *
- * @param (DOM Node) component the component to move
- * @param (number) the absolute left coordinate
- * @param (number) the absolute top coordinate
- */
-function moveToPoint(component, left, top) {
-	$component = $(component);
-	var currentTransform = getMatrix(component);
-	var currentTranslate = getTranslation(currentTransform);
-	var angle = getAngle(currentTransform);
+        var transform = _getPrefixedStyle( elem, 'transform');
+        var transformOrigin = _getPrefixedStyle( elem, 'transformOrigin');
+        origin = transformOrigin.split(' ').map( parseFloat );
+        origin[2] = origin[2] || 0; // set the initial z
 
-	var currentOrigin = $component.css("transform-origin").split(" ");
-	var currentOriginLeft = parseFloat(currentOrigin[0]);
-	var currentOriginTop = parseFloat(currentOrigin[1]);
+        if ( transform && transform !== 'none' ) {
+            cssMatrix = transform.substring( transform.indexOf('(') + 1, transform.length - 1 );
+            cssMatrix = cssMatrix.split(', ').map( function( entry ) {
+                return _truncate( parseFloat( entry ), 2 );
+            });
 
-	//Get the offset of the component's bounding rect
-	var componentOffsetLeft = $component.offset().left;
-	var componentOffsetTop = $component.offset().top;
+            if ( cssMatrix.length === 6 ) { // 2D matrix
+                cssMatrix.map( function( elem, index ) {
+                    var row = index % 2;
+                    var col = Math.floor( index / 2 ) + ( index > 3 ? 1 : 0 );
+                    matrix[ row ][ col ] = elem;
+                });
+            } else if ( cssMatrix.length === 16 ) { // 3D matrix
+                cssMatrix.map( function( elem, index ) {
+                    var row = index % 4;
+                    var col = Math.floor( index / 4 );
+                    matrix[ row ][ col ] = elem;
+                });
+            } else {
+                throw( Error('elem has a transformation matrix that is not well defined') );
+            }
+        }
 
-	//Get the relative position of the center of the bounding rect
-	var componentRect = component.getBoundingClientRect();
-	var centroidLeft = componentOffsetLeft+componentRect.width/2;
-	var centroidTop = componentOffsetTop+componentRect.height/2;
+        return new CSSMatrix( matrix, origin, elem );
+    }
 
-	//Difference between the origin and center vectors
-	var dxOriginRect = currentOriginLeft - $component.width()/2;
-	var dyOriginRect = currentOriginTop - $component.height()/2;
+    /**
+      * Returns a matrix3d representing the CSS transform
+      */
+    CSSMatrix.prototype.toCSSMatrix = function() {
+        var values = _zip.apply( this, this._matrix ).map( function( col ) {
+            return col.map(function( elem ) {
+                return _truncate( elem, 2 );
+            }).join(', ');
+        }).join(', ');
+        return 'matrix3d(' + values + ')';
+    };
 
-	//Difference in the rotated coordinate system
-	var dOrigin = rotateMatrix([[dxOriginRect, dyOriginRect, 1]], -angle);
+    /**
+      * Returns the CSS transform origin associated with this matrix
+      */
+    CSSMatrix.prototype.getOrigin = function() {
+        return this._origin[0] + "px " + this._origin[1] + "px " + this._origin[2];
+    };
 
-	//The unrotated, absolute offset of the transformation origin
-	var originOffsetLeft = centroidLeft + dOrigin[0][0];
-	var originOffsetTop = centroidTop + dOrigin[0][1];
+    CSSMatrix.prototype.apply = function( elem ) {
+        elem = ( elem ? _getElem( elem ) : this._elem );
 
-	var dx = 0;
-	if(left !== "current") {
-		var dx = left-originOffsetLeft;
-	}
-	
-	var dy = 0;
-	if(top !== "current") {
-		var dy = top-originOffsetTop;
-	}
+        _setPrefixedStyle( elem, 'transform', this.toCSSMatrix() );
+        _setPrefixedStyle( elem, 'transformOrigin', this.getOrigin() );
+    };
 
-	var result = translateMatrix(getMatrix(component), dx, dy);
-	$component.css("transform", toCSSMatrix(result));
-}
+    function ssc() {
+        return getMatrix.apply( this, arguments );
+    }
 
-/**
- * Returns the result of multiplying matrixA*matrixB
- *
- * @param matrixA the left matrix
- * @param matrixB the right matrix
- *
- * @return the result of A*B
- * Note: matrixA and matrixB are unmodified
- *
- * @throws exception if |colsA| != |rowsB|
- */
-function multiplyMatrix(matrixA, matrixB) {
-	var numColsA = matrixA.length;
-	var numRowsA = matrixA[0].length;
-	var numColsB = matrixB.length;
-	var numRowsB = matrixB[0].length;
-	if(numColsA !== numRowsB) {
-		throw "|colsA| != |rowsB|";
-	}
+    ssc.prototype.CSSMatrix = CSSMatrix;
 
-	//Initialize the product matrix
-	var matrixC = [];
-	for(var colC = 0; colC < numColsB; colC++) {
-		matrixC[colC] = [];
-	}
-
-	//Do the multiplication
-	for(var rowA = 0; rowA < numRowsA; rowA++) {
-		var theRowA = [];
-		for(var colA = 0; colA < numColsA; colA++) {
-			theRowA[colA] = matrixA[colA][rowA];
-		}
-		for(var colB = 0; colB < numColsB; colB++) {
-			var scalarProduct = dotProduct(theRowA, matrixB[colB]);
-			matrixC[colB][rowA] = scalarProduct;
-		}
-	}
-	return matrixC;
-}
-
-/**
- * Parses a CSS2D matrix and outputs a 2D array with the columns as the first elements
- * Ex: [[c1r1, c1r2],[c2r1, c2r2]]
- *
- * @param (CSS2D matrix) cssMatrix the CSS2D matrix to parse
- *
- * @return the matrix in array format
- */
-function parseMatrix(cssMatrix) {
-	cssMatrix = cssMatrix.substring(cssMatrix.indexOf("(")+1,cssMatrix.length-1).split(",");
-	var matrix = [[],[],[]];
-	var values = cssMatrix.map(function(val) { return parseFloat(val.trim()); });
-	if(values.length < 6) {
-		//No transformation matrix. Give it the identity
-		for(var i=0; i < 6; i++) {
-			var value = ((i === 0 || i === 3) ? 1 : 0);
-			matrix[Math.floor(i/2)][i%2] = value;
-		}
-	} else {
-		for(var i=0; i<values.length; i++) {
-			//The first index is the column, the second is the row
-			matrix[Math.floor(i/2)][i%2] = fixRoundingErrors(values[i]);
-		}
-	}
-	matrix[0][2] = 0;
-	matrix[1][2] = 0;
-	matrix[2][2] = 1;
-	return matrix;
-}
-
-/**
- * Rotates a CSS2D matrix by the specified angle (in radians)
- * @param matrix the matrix to rotate 
- * Note: the columns must be the first elements of the 2D array
- * @param angle the angle by which to rotate the matrix
- *
- * @return the matrix rotated by angle
- * Note: the original matrix is not modified
- */
-function rotateMatrix(matrix, angle) {
-	var rotationMatrix = [[Math.cos(angle), Math.sin(angle), 0], [-Math.sin(angle), Math.cos(angle), 0], [0, 0, 1]];
-	return multiplyMatrix(rotationMatrix, matrix);
-}
-
-/**
- * Rotates a CSS2D matrix by the specified angle (in radians) disregarding translations
- * @param matrix the matrix to rotate 
- * Note: the columns must be the first elements of the 2D array
- * @param angle the angle by which to rotate the matrix
- *
- * @return the matrix rotated by angle
- * Note: the original matrix is not modified
- */
-function rotateMatrixNoTranslate(matrix, angle) {
-	var toRotate = $.extend(true, [], matrix);
-	var toRotate = setTranslate(toRotate, 0, 0);
-	var rotated = rotateMatrix(toRotate, angle);
-	var originalTranslate = getTranslation(matrix);
-	return translateMatrix(rotated, originalTranslate[0], originalTranslate[1]);
-}
-
-/**
- * Rotates the component to the given angle
- *
- * @param component the component to rotate
- * @param angle the new angle of the component (in radians)
- */
-function rotateToAngle(component, angle) {
-	$component = $(component);
-	var currentTransform = parseMatrix($component.css("transform"));
-	var currentAngle = getAngle(currentTransform);
-	var delta = currentAngle-angle;
-	var result = rotateMatrixNoTranslate(currentTransform, delta);
-	$component.css("transform", toCSSMatrix(result));
-}
-
-/**
- * Sets the rotation of a transformation matrix
- *
- * @param matrix the [col][row] matrix to rotate
- * @param angle the new angle in radians
- *
- * @return a matrix translated to (x, y)
- * Note: the original matrix is unmodified
- */
-function setRotate(matrix, angle) {
-	var rotated = $.extend(true, [], matrix); //deep copy of matrix
-	rotated[0][0] = Math.cos(angle);
-	rotated[1][1] = Math.cos(angle);
-	rotated[1][0] = -Math.sin(angle);
-	rotated[0][1] = Math.sin(angle);
-	return rotated;
-}
-
-/**
- * Sets the translate of a transformation matrix
- *
- * @param matrix the [col][row] transformation matrix to translate
- * @param x the new x translate
- * @param y the new y translate
- *
- * @return a matrix translated to (x, y)
- * Note: the original matrix is unmodified
- */
-function setTranslate(matrix, x, y) {
-	var translated = $.extend(true, [], matrix); //deep copy of matrix
-	translated[2][0] = x;
-	translated[2][1] = y;
-	return translated;
-}
-
-/**
- * Stops the animation with the given ID
- * TODO: this needs to be more robust/elegant, but it's not a core feature
- */
-function stopAnimation(id) {
-	//This is kludgy
-	animations[id] = "stopped"
-}
-
-/* Swings a component and returns a handle to the animation
- * @param component the DOM element to swing
- * @param damping how much to damp the periodic motion
- */
-function swingComponent(component, damping, period, animationId) {
-	if(animationId === undefined) {
-		animationId = animations.length;
-		animations[animationId] = "running";
-	}
-	if(animations[animationId] != "running") {
-		return;
-	}
-	var gravity = 19800;
-	if(damping === undefined) {
-		damping = 0;
-	}
-	$component = $(component);
-	var axisLength = $component.width();
-	var angle = getAngle(getMatrix(component));
-	var delta = (Math.PI - angle);
-	delta -= Math.cos(delta)*damping;
-	if(period === undefined) {
-		var period = Math.PI*2/agm(1, Math.abs(Math.cos(angle)))*Math.sqrt(axisLength/gravity);
-	}
-	$component.css("transition", "all "+period+"s "+"ease-in-out");
-	rotateToAngle(component, delta);
-	if(Math.abs(Math.cos(delta)) < .2) {
-		rotateToAngle(component, -Math.PI/2);
-	}
-	setTimeout(function() { swingComponent(component, damping, period, animationId); }, period*1000);
-	return animationId;
-}
-
-/**
- * Converts a 3x3 matrix into a CSS2D matrix
- *
- * @param matrix the 3x3 matrix in [col][row] format to convert
- *
- * @return the matrix in CSS2D format
- */
-function toCSSMatrix(matrix) {
-	var cssMatrix = "matrix(";
-	for(var col = 0; col<matrix.length; col++) {
-		for(var row = 0; row<matrix[0].length-1; row++) {
-			cssMatrix += fixRoundingErrors(matrix[col][row])+", ";
-		}
-	}
-	cssMatrix = cssMatrix.substring(0, cssMatrix.length-2) + ")";
-	return cssMatrix;
-}
-
-/**
- * Translates the transformation matrix
- *
- * @param dx the x offset
- * @param dy the y offset
- *
- * @return a matrix translated to (x + dx, y + dy)
- * Note: the original matrix is unmodified
- */
-function translateMatrix(matrix, dx, dy) {
-	var translated = $.extend(true, [], matrix); //deep copy of matrix
-	translated[2][0] += dx;
-	translated[2][1] += dy;
-	return translated;
-}
+    return ssc;
+});
