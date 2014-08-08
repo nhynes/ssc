@@ -1,10 +1,8 @@
-(function( factory ) {
+(function( ssc ) {
     if ( typeof define === 'function' && define.amd ) {
-        define(function() {
-            return factory();
-        });
+        define( ssc );
     } else {
-        window.ssc = factory();
+        window.ssc = ssc();
     }
 })(function() {
 
@@ -79,10 +77,6 @@
     }
 
     function _getPrefixedStyle( elem, propName ) {
-        propName = propName.replace( /[A-Z]/g, function( match ) {
-            return '-' + match.toLowerCase();
-        });
-        propName = propName.toLowerCase();
         var styles = window.getComputedStyle( elem );
         var vendorValue;
         VENDORS.map( function( vendor ) {
@@ -97,188 +91,222 @@
       * Represents a matrix3d in row-major order
       */
     function CSSMatrix( matrix, origin, elem ) {
-        console.log( origin );
         this._matrix = matrix;
         this._origin = origin;
         this._elem = elem;
         this._elemRect = elem.getBoundingClientRect();
     }
 
-    /**
-      * Returns a copy of this CSS matrix
-      */
-    CSSMatrix.prototype.clone = function() {
-        return new CSSMatrix( _cloneMatrix( this.matrix ), this.origin, this._elem );
-    };
+    CSSMatrix.prototype = {
+        /**
+          * Returns a copy of this CSS matrix
+          */
+        clone: function() {
+            return new CSSMatrix( _cloneMatrix( this.matrix ), this.origin, this._elem );
+        },
 
-    /**
-      * Returns a copy of this matrix translated by <dx, dy, dz>
-      * Arguments can be either a vector (e.g. [ x, y, z ]) or scalars.
-      * Unspecified arguments default to zero.
-      */
-    CSSMatrix.prototype.translate = function() {
-        var translateBy = _parseArgs( arguments );
-        var currentTranslate = this.getTranslate();
-        return this.setTranslate( _zip( currentTranslate, translateBy ).map( function( vects ) {
-            return ( vects[1] !== undefined ? vects[0] + vects[1] : 0 );
-        }) );
-    };
+        /**
+          * Returns a copy of this matrix translated by <dx, dy, dz>
+          * Arguments can be either a vector (e.g. [ x, y, z ]) or scalars.
+          * Unspecified arguments default to zero.
+          */
+        translate: function() {
+            var translateBy = _parseArgs( arguments );
+            var currentTranslate = this.getTranslate();
+            return this.setTranslate( _zip( currentTranslate, translateBy )
+                .map( function( vects ) {
+                    return ( vects[1] !== undefined ? vects[0] + vects[1] : 0 );
+                }) );
+        },
 
-    /**
-      * Translates the matrix to <x, y, z>
-      * Arguments can be either a vector (e.g. [ x, y, z ]) or scalars.
-      * Unspecified arguments default to zero.
-      */
-    CSSMatrix.prototype.setTranslate = function() {
-        var translateVector = _parseArgs( arguments );
-        var translatedMatrix = _cloneMatrix( this._matrix );
-        translateVector.map( function( elem, index ) {
-            translatedMatrix[ index ][ 3 ] = elem;
-        });
-        return new CSSMatrix( translatedMatrix, this._origin, this._elem );
-    };
-
-    /**
-      * Returns the current translation represented by this matrix: [ x, y, z ]
-      */
-    CSSMatrix.prototype.getTranslate = function() {
-        return [
-            this._matrix[0][3],
-            this._matrix[1][3],
-            this._matrix[2][3]
-        ];
-    };
-
-    /**
-      * Returns a copy of this matrix scaled by <dx, dy, dz>
-      * Arguments can be either a vector (e.g. [ x, y, z ]) or scalars.
-      * Unspecified arguments default to one.
-      */
-    CSSMatrix.prototype.scale = function() {
-        var scaleVector = _parseArgs( arguments, 4, 1 );
-        var scaleMatrix = [
-            [ scaleVector[0], 0, 0, 0 ],
-            [ 0, scaleVector[1], 0, 0 ],
-            [ 0, 0, scaleVector[2], 0 ],
-            [ 0, 0, 0, 1 ]
-        ];
-        return new CSSMatrix( scaleMatrix, this._origin, this._elem ).multiply( this._matrix );
-    };
-
-    /**
-      * Returns a copy of this matrix scaled to x, y, z
-      * Arguments can be either a vector (e.g. [ x, y, z ]) or scalars.
-      * Unspecified arguments default to zero.
-      */
-    CSSMatrix.prototype.setScale = function() {
-        var scaleVector = _parseArgs( arguments, 4, 1 );
-        var scaledMatrix = _cloneMatrix( this._matrix );
-        scaleVector.map( function( elem, index ) {
-            scaledMatrix[ index ][ index ] = elem;
-        });
-        return new CSSMatrix( scaledMatrix, this._origin, this._elem );
-    };
-
-    /**
-      * Returns the current scale represented by this matrix: [ x, y, z ]
-      */
-    CSSMatrix.prototype.getScale = function() {
-        return [
-            this._matrix[0][0],
-            this._matrix[1][1],
-            this._matrix[2][2]
-        ];
-    };
-
-    /**
-      * Changes the transformation origin while maintaining the current transform relative to
-      * the screen.
-      * Values of x and y are relative to the untransformed bounding box.
-      *
-      * Arguments are specified in pixels, keywords, or percents and can be an array or positional.
-      * Unspecified arguments default to the previous value.
-      */
-    CSSMatrix.prototype.changeOrigin = function() {
-        var newOrigin = [];
-        if ( typeof arguments[0] === 'string' ) {
-            arguments[0].split(' ').map( function( component, index, components ) {
-                if ( component.indexOf('%') !== -1 ) {
-                    var dimension = ( index === 0 ?
-                        this._elemRect.width : this._elemRect.height );
-                    newOrigin[ index ] = dimension * parseFloat( component ) / 100;
-                } else {
-                    switch( component.toLowerCase() ) {
-                        case 'left':
-                            newOrigin[0] = 0;
-                            break;
-                        case 'right':
-                            newOrigin[0] = this._elemRect.width;
-                            break;
-                        case 'top':
-                            newOrigin[1] = 0;
-                            break;
-                        case 'bottom':
-                            newOrigin[1] = this._elemRect.height;
-                            break;
-                        case 'center':
-                            if ( components.length === 1 ) {
-                                newOrigin = [ this._elemRect.width / 2, this._elemRect.height / 2 ];
-                            } else {
-                                if ( index === 0 ) { newOrigin[0] = this._elemRect.width / 2; }
-                                else { newOrigin[1] = this._elemRect.height / 2; }
-                            }
-                            break;
-                        default:
-                            newOrigin[2] = parseInt( component, 10 );
-                    }
-                }
-            }, this );
-        } else {
-            newOrigin = _parseArgs( arguments, 3, undefined );
-        }
-        newOrigin[2] = newOrigin[2] || 0;
-
-        var delta = _zip( this._origin, newOrigin ).map( function( components ) {
-            return ( components[1] !== undefined ? components[1] - components[0] : 0 );
-        });
-
-        console.log( this._origin, newOrigin );
-
-        this._origin = _zip( this._origin, newOrigin ).map( function( components ) {
-            return ( components[1] !== undefined ? components[1] : components[0] );
-        });
-
-        console.log( this.getOrigin(), delta );
-
-        return this; //.translate( delta );
-    };
-
-    /**
-      * Multiplies the CSS matrix by a given matrix; preferably a 4xn matrix.
-      */
-    CSSMatrix.prototype.multiply = function( otherMatrix ) {
-        var otherMatrixT;
-        if ( otherMatrix[0].length ) {
-            otherMatrixT = _zip.apply( this, otherMatrix );
-        } else {
-            otherMatrixT = [ otherMatrix ];
-        }
-
-        var multipliedMatrix = this._matrix.map( function( row ) {
-            return otherMatrixT.map( function( col ) {
-                return _zip( row, col )
-                    .map( function( components ) { return components[0] * components[1]; })
-                    .reduce( function( sum, val ) { return sum + val; }, 0 );
+        /**
+          * Translates the matrix to <x, y, z>
+          * Arguments can be either a vector (e.g. [ x, y, z ]) or scalars.
+          * Unspecified arguments default to zero.
+          */
+        setTranslate: function() {
+            var translateVector = _parseArgs( arguments );
+            var translatedMatrix = _cloneMatrix( this._matrix );
+            translateVector.map( function( elem, index ) {
+                translatedMatrix[ index ][ 3 ] = elem;
             });
-        });
+            return new CSSMatrix( translatedMatrix, this._origin, this._elem );
+        },
 
-        return new CSSMatrix( multipliedMatrix, this._origin, this._elem );
-    };
+        /**
+          * Returns the current translation represented by this matrix: [ x, y, z ]
+          */
+        getTranslate: function() {
+            return [
+                this._matrix[0][3],
+                this._matrix[1][3],
+                this._matrix[2][3]
+            ];
+        },
+
+        /**
+          * Returns a copy of this matrix scaled by <dx, dy, dz>
+          * Arguments can be either a vector (e.g. [ x, y, z ]) or scalars.
+          * Unspecified arguments default to one.
+          */
+        scale: function() {
+            var scaleVector = _parseArgs( arguments, 4, 1 );
+            var scaleMatrix = [
+                [ scaleVector[0], 0, 0, 0 ],
+                [ 0, scaleVector[1], 0, 0 ],
+                [ 0, 0, scaleVector[2], 0 ],
+                [ 0, 0, 0, 1 ]
+            ];
+            var scaleCSSMatrix = new CSSMatrix( scaleMatrix, this._origin, this._elem )
+            return scaleCSSMatrix.multiply( this._matrix );
+        },
+
+        /**
+          * Returns a copy of this matrix scaled to x, y, z
+          * Arguments can be either a vector (e.g. [ x, y, z ]) or scalars.
+          * Unspecified arguments default to zero.
+          */
+        setScale: function() {
+            var scaleVector = _parseArgs( arguments, 4, 1 );
+            var scaledMatrix = _cloneMatrix( this._matrix );
+            scaleVector.map( function( elem, index ) {
+                scaledMatrix[ index ][ index ] = elem;
+            });
+            return new CSSMatrix( scaledMatrix, this._origin, this._elem );
+        },
+
+        /**
+          * Returns the current scale represented by this matrix: [ x, y, z ]
+          */
+        getScale: function() {
+            return [
+                this._matrix[0][0],
+                this._matrix[1][1],
+                this._matrix[2][2]
+            ];
+        },
+
+        /**
+          * Changes the transform origin while maintaining the current onscreen position
+          * Values of x and y are relative to the untransformed bounding box.
+          *
+          * Arguments are pixels, keywords, or percents and can be an array or positional.
+          * Unspecified arguments default to the previous value.
+          */
+        changeOrigin: function() {
+            var newOrigin = [];
+            if ( typeof arguments[0] === 'string' ) {
+                arguments[0].split(' ').map( function( component, index, components ) {
+                    if ( component.indexOf('%') !== -1 ) {
+                        var dimension = ( index === 0 ?
+                            this._elemRect.width : this._elemRect.height );
+                        newOrigin[ index ] = dimension * parseFloat( component ) / 100;
+                    } else {
+                        switch( component.toLowerCase() ) {
+                            case 'left':
+                                newOrigin[0] = 0;
+                                break;
+                            case 'right':
+                                newOrigin[0] = this._elemRect.width;
+                                break;
+                            case 'top':
+                                newOrigin[1] = 0;
+                                break;
+                            case 'bottom':
+                                newOrigin[1] = this._elemRect.height;
+                                break;
+                            case 'center':
+                                if ( components.length === 1 ) {
+                                    newOrigin = [ this._elemRect.width / 2,
+                                                  this._elemRect.height / 2 ];
+                                } else {
+                                    if ( index === 0 ) {
+                                        newOrigin[0] = this._elemRect.width / 2;
+                                    }
+                                    else {
+                                        newOrigin[1] = this._elemRect.height / 2;
+                                    }
+                                }
+                                break;
+                            default:
+                                newOrigin[2] = parseInt( component, 10 );
+                        }
+                    }
+                }, this );
+            } else {
+                newOrigin = _parseArgs( arguments, 3, undefined );
+            }
+            newOrigin[2] = newOrigin[2] || 0;
+
+            var currentScale = this.getScale();
+
+            var delta = _zip( this._origin, newOrigin, currentScale )
+                .map( function( comps ) {
+                    var deltaOrigin = ( comps[1] !== undefined ? comps[1] - comps[0] : 0 );
+                    return ( comps[2] - 1 ) * deltaOrigin;
+                });
+
+            this._origin = _zip( this._origin, newOrigin ).map( function( components ) {
+                return ( components[1] !== undefined ? components[1] : components[0] );
+            });
+
+            return this.translate( delta );
+        },
+
+        /**
+          * Multiplies the CSS matrix by a given matrix; preferably a 4xn matrix.
+          */
+        multiply: function( otherMatrix ) {
+            var otherMatrixT;
+            if ( otherMatrix[0].length ) {
+                otherMatrixT = _zip.apply( this, otherMatrix );
+            } else {
+                otherMatrixT = [ otherMatrix ];
+            }
+
+            var multipliedMatrix = this._matrix.map( function( row ) {
+                return otherMatrixT.map( function( col ) {
+                    return _zip( row, col )
+                        .map( function( components ) {
+                            return components[0] * components[1];
+                        })
+                        .reduce( function( sum, val ) { return sum + val; }, 0 );
+                });
+            });
+
+            return new CSSMatrix( multipliedMatrix, this._origin, this._elem );
+        },
+
+        /**
+          * Returns a matrix3d representing the CSS transform
+          */
+        toCSSMatrix: function() {
+            var values = _zip.apply( this, this._matrix ).map( function( col ) {
+                return col.map(function( elem ) {
+                    return _truncate( elem, 2 );
+                }).join(', ');
+            }).join(', ');
+            return 'matrix3d(' + values + ')';
+        },
+
+        /**
+          * Returns the CSS transform origin associated with this matrix
+          */
+        getOrigin: function() {
+            return this._origin[0] + "px " + this._origin[1] + "px " + this._origin[2];
+        },
+
+        apply: function( elem ) {
+            elem = ( elem ? _getElem( elem ) : this._elem );
+
+            _setPrefixedStyle( elem, 'transform', this.toCSSMatrix() );
+            _setPrefixedStyle( elem, 'transformOrigin', this.getOrigin() );
+        }
+    }
 
     /**
       * Params:
-      * elem {String|Element} - Takes an element or a CSS selector for an element and returns a
-                                CSSMatrix
+      * elem {String|Element} - Returns a CSSMatrix for a given element or CSS selector
       *
       * Returns a CSSMatrix
       */
@@ -325,37 +353,11 @@
         return new CSSMatrix( matrix, origin, elem );
     }
 
-    /**
-      * Returns a matrix3d representing the CSS transform
-      */
-    CSSMatrix.prototype.toCSSMatrix = function() {
-        var values = _zip.apply( this, this._matrix ).map( function( col ) {
-            return col.map(function( elem ) {
-                return _truncate( elem, 2 );
-            }).join(', ');
-        }).join(', ');
-        return 'matrix3d(' + values + ')';
-    };
-
-    /**
-      * Returns the CSS transform origin associated with this matrix
-      */
-    CSSMatrix.prototype.getOrigin = function() {
-        return this._origin[0] + "px " + this._origin[1] + "px " + this._origin[2];
-    };
-
-    CSSMatrix.prototype.apply = function( elem ) {
-        elem = ( elem ? _getElem( elem ) : this._elem );
-
-        _setPrefixedStyle( elem, 'transform', this.toCSSMatrix() );
-        _setPrefixedStyle( elem, 'transformOrigin', this.getOrigin() );
-    };
-
     function ssc() {
         return getMatrix.apply( this, arguments );
     }
 
-    ssc.prototype.CSSMatrix = CSSMatrix;
+    ssc.CSSMatrix = CSSMatrix;
 
     return ssc;
 });
