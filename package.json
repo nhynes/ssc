@@ -1,0 +1,14 @@
+{
+  "name": "SSC",
+  "description": "A CSS 3D transformation library",
+  "version": "0.2.0",
+  "main": "ssc.js",
+  "devDependencies": {
+    "gulp": "^3.8.7",
+    "gulp-jscs": "^1.1.0",
+    "gulp-jshint": "^1.8.4",
+    "gulp-qunit": "^0.3.3",
+    "gulp-uglify": "^0.3.1",
+    "jshint-stylish": "^0.4.0"
+  }
+}

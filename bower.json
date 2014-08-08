@@ -1,0 +1,30 @@
+{
+  "name": "ssc",
+  "main": "ssc.js",
+  "version": "0.2.0",
+  "homepage": "https://github.com/nhynes/ssc",
+  "authors": [
+    "Nick Hynes <nhynes@mit.edu>"
+  ],
+  "description": "A CSS 3D transformation library",
+  "moduleType": [
+    "amd",
+    "globals"
+  ],
+  "keywords": [
+    "css",
+    "ssc",
+    "3d",
+    "transformation",
+    "matrix",
+    "transform"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
