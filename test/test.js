@@ -18,7 +18,7 @@ QUnit.test( 'getting the matrix for an element', function( assert ) {
 QUnit.test( 'getting the initial transformation parameters', function( assert ) {
     var matrix = ssc('#test');
 
-    assert.strictEqual( matrix.getOrigin(), '50px 50px 0', 'initial origin should be center' );
+    assert.strictEqual( matrix.getOriginCSS(), '50px 50px 0', 'initial origin should be center' );
     assert.strictEqual( matrix.toTransformMatrix(),
         'matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)',
         'initial transform should be the 3D identity' );
@@ -79,7 +79,7 @@ QUnit.test( 'scales', function( assert ) {
 QUnit.test( 'change transform', function( assert ) {
     var matrix = ssc('#test').scale( .5, 2 ).changeOrigin('top left');
 
-    assert.strictEqual( matrix.getOrigin(), '0px 0px 0' );
+    assert.strictEqual( matrix.getOriginCSS(), '0px 0px 0' );
 
     assert.strictEqual( matrix.toTransformMatrix(),
         'matrix3d(0.5, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 25, -50, 0, 1)');
@@ -87,6 +87,6 @@ QUnit.test( 'change transform', function( assert ) {
     var originAbsolute = ssc('#test').changeOrigin( 10, 10 );
     var originPercent = ssc('#test').changeOrigin('10% 10%');
 
-    assert.strictEqual( originAbsolute.getOrigin(), '10px 10px 0' );
-    assert.strictEqual( originAbsolute.getOrigin(), originPercent.getOrigin() );
+    assert.strictEqual( originAbsolute.getOriginCSS(), '10px 10px 0' );
+    assert.strictEqual( originAbsolute.getOriginCSS(), originPercent.getOriginCSS() );
 });

@@ -1,6 +1,6 @@
 {
   "name": "ssc",
-  "main": "ssc.js",
+  "main": "lib/ssc.js",
   "version": "0.2.0",
   "homepage": "https://github.com/nhynes/ssc",
   "authors": [
@@ -26,5 +26,8 @@
     "bower_components",
     "test",
     "tests"
-  ]
+  ],
+  "devDependencies": {
+    "qunit": "~1.15.0"
+  }
 }

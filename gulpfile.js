@@ -2,6 +2,7 @@ var gulp = require('gulp'),
     jscs = require('gulp-jscs'),
     jshint = require('gulp-jshint'),
     qunit = require('gulp-qunit'),
+    rename = require('gulp-rename'),
     stylish = require('jshint-stylish'),
     uglify = require('gulp-uglify');
 
@@ -13,7 +14,7 @@ gulp.task( 'test', function() {
 });
 
 gulp.task( 'style', function() {
-    gulp.src('3ssc.js')
+    gulp.src('ssc.js')
         .pipe( jscs() )
         .pipe( jshint() )
         .pipe( jshint.reporter( stylish ) )
@@ -21,11 +22,12 @@ gulp.task( 'style', function() {
 });
 
 gulp.task( 'build', [ 'style', 'test' ], function() {
-    gulp.src('3ssc.js')
+    gulp.src('ssc.js')
         .pipe( uglify() )
-        .pipe( gulp.dest('./dist/') );
+        .pipe( rename({ suffix: '.min' }) )
+        .pipe( gulp.dest('./lib/') );
 });
 
 gulp.task( 'watch', function() {
-    gulp.watch( [ '3ssc.js', 'test/*.js' ], [ 'style', 'test' ]);
+    gulp.watch( [ 'ssc.js', 'test/*.js' ], [ 'style', 'test' ]);
 });
