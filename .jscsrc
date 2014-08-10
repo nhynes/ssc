@@ -59,7 +59,6 @@
     "requireSpaceAfterBinaryOperators": true,
     "requireCamelCaseOrUpperCaseIdentifiers": true,
     "disallowKeywords": [ "with" ],
-    "disallowMultipleLineBreaks": true,
     "validateLineBreaks": "LF",
     "validateQuoteMarks": "'",
     "validateIndentation": 4,
@@ -70,5 +69,10 @@
     "requireLineFeedAtFileEnd": true,
     "requireCapitalizedConstructors": true,
     "requireDotNotation": true,
-    "disallowYodaConditions": true
+    "disallowYodaConditions": true,
+    "requireSpaceAfterLineComment": true,
+    "disallowNewlineBeforeBlockStatements": true,
+    "requireParenthesesAroundIIFE": true,
+    "requireLineFeedAtFileEnd": true,
+    "maximumLineLength": 100
 }

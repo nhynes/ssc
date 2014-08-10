@@ -6,28 +6,35 @@ var gulp = require('gulp'),
     stylish = require('jshint-stylish'),
     uglify = require('gulp-uglify');
 
-gulp.task( 'default', [ 'style', 'test', 'watch' ] );
+var path = {
+    js: [ 'test/**/*.js', 'lib/ssc.js' ],
+    tests: 'test/**/*',
+    src: 'lib/ssc.js'
+}
+
+gulp.task( 'default', [ 'checkstyle', 'test', 'watch' ] );
 
 gulp.task( 'test', function() {
     gulp.src( 'test/test.html' )
         .pipe( qunit() );
 });
 
-gulp.task( 'style', function() {
-    gulp.src('ssc.js')
+gulp.task( 'checkstyle', function() {
+    gulp.src([ 'lib/ssc.js', 'test/**/*.js' ])
         .pipe( jscs() )
         .pipe( jshint() )
         .pipe( jshint.reporter( stylish ) )
         .pipe( jshint.reporter('fail') );
 });
 
-gulp.task( 'build', [ 'style', 'test' ], function() {
+gulp.task( 'dist', [ 'checkstyle', 'test' ], function() {
     gulp.src('ssc.js')
         .pipe( uglify() )
         .pipe( rename({ suffix: '.min' }) )
-        .pipe( gulp.dest('./lib/') );
+        .pipe( gulp.dest('lib/') );
 });
 
 gulp.task( 'watch', function() {
-    gulp.watch( [ 'ssc.js', 'test/*.js' ], [ 'style', 'test' ]);
+    gulp.watch( [ path.js ], [ 'checkstyle' ]);
+    gulp.watch( [ path.src, path.tests], [ 'test' ]);
 });

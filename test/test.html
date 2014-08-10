@@ -1,7 +1,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>3SSC Test</title>
+    <title>SSC Test</title>
     <style type="text/css">
       #test {
         width: 100px;
@@ -9,12 +9,29 @@
         position: absolute;
         top: calc( 50% - 50px );
         left: calc( 50% - 50px );
+        transform-style: preserve-3d;
+      }
+      .panel {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+      }
+      .panel.front {
         background-color: lightgreen;
+      }
+      .panel.back {
+        background-color: lightblue;
+        transform: rotate3d(0, 1, 0, 180deg);
       }
     </style>
   </head>
   <body>
-    <div id="test"></div>
+    <div id="test">
+      <div class="panel front"></div>
+      <div class="panel back"></div>
+    </div>
+    <div id="test-bg"></div>
     <div id="qunit-fixture"></div>
     <script type="application/javascript" src="../lib/ssc.js"></script>
     <script type="application/javascript" src="../bower_components/qunit/qunit/qunit.js"></script>

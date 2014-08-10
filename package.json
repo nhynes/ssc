@@ -1,6 +1,16 @@
 {
   "name": "SSC",
   "description": "A CSS 3D transformation library",
+  "homepage": "https://github.com/nhynes/ssc",
+  "license": "MIT",
+  "author": {
+      "name": "Nick Hynes",
+      "email": "nhynes@mit.edu"
+  },
+  "repository": {
+      "type": "git",
+      "url": "https://github.com/nhynes/ssc"
+  },
   "version": "0.2.0",
   "main": "ssc.js",
   "devDependencies": {

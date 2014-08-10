@@ -8,7 +8,6 @@
     "quotmark": "single",
     "undef": true,
     "unused": true,
-    "strict": true,
     "browser": true,
     "bitwise": true,
     "freeze": true,
@@ -16,6 +15,8 @@
     "nonew": true,
 
     "globals": {
-        "define": true
+        "define": true,
+        "QUnit": true,
+        "ssc": true
     }
 }
