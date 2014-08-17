@@ -1,6 +1,7 @@
 var gulp = require('gulp'),
     jscs = require('gulp-jscs'),
     jshint = require('gulp-jshint'),
+    plumber = require('gulp-plumber'),
     qunit = require('gulp-qunit'),
     rename = require('gulp-rename'),
     stylish = require('jshint-stylish'),
@@ -21,10 +22,10 @@ gulp.task( 'test', function() {
 
 gulp.task( 'checkstyle', function() {
     gulp.src([ 'lib/ssc.js', 'test/**/*.js' ])
+        .pipe( plumber())
         .pipe( jscs() )
         .pipe( jshint() )
-        .pipe( jshint.reporter( stylish ) )
-        .pipe( jshint.reporter('fail') );
+        .pipe( jshint.reporter( stylish ) );
 });
 
 gulp.task( 'dist', [ 'checkstyle', 'test' ], function() {

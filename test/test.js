@@ -61,7 +61,7 @@ QUnit.test( 'scales', function( assert ) {
     var matrix = ssc('#test'),
         scaled = matrix.scale( 42, 69, 99 ),
         scaledVect = matrix.scale([ 42, 69, 99 ]),
-        setScale;
+        setScale = matrix.setScale( 42 );
 
     assert.strictEqual( scaled.toTransformMatrix(),
          'matrix3d(42, 0, 0, 0, 0, 69, 0, 0, 0, 0, 99, 0, 0, 0, 0, 1)');
@@ -69,7 +69,6 @@ QUnit.test( 'scales', function( assert ) {
     assert.deepEqual( scaled, scaledVect,
         'scale should produce the same result for both positional and vector arguments');
 
-    setScale = matrix.setScale( 42 );
     assert.strictEqual( setScale.toTransformMatrix(),
          'matrix3d(42, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)');
 
@@ -78,19 +77,54 @@ QUnit.test( 'scales', function( assert ) {
         'scaling with fewer than three arguments should leave the old scale intact');
 });
 
-QUnit.test( 'change transform', function( assert ) {
-    var matrix = ssc('#test').scale( 0.5, 2 ).changeOrigin('top left'),
-        originAbsolute,
-        originPercent;
+QUnit.test( 'change origin', function( assert ) {
+    var matrix = ssc('#test'),
+        scaled = matrix.scale( 0.5, 2 ).changeOrigin('top left'),
+        originAbsolute = matrix.changeOrigin( 10, 10 ),
+        originPercent = matrix.changeOrigin('10% 10%'),
+        originPercentScaled = matrix.scale( 2, 2 ).changeOrigin('10% 10%');
 
-    assert.strictEqual( matrix.getOriginCSS(), '0px 0px 0' );
+    assert.strictEqual( scaled.getOriginCSS(), '0px 0px 0' );
 
-    assert.strictEqual( matrix.toTransformMatrix(),
+    assert.strictEqual( scaled.toTransformMatrix(),
         'matrix3d(0.5, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 25, -50, 0, 1)');
-
-    originAbsolute = ssc('#test').changeOrigin( 10, 10 );
-    originPercent = ssc('#test').changeOrigin('10% 10%');
 
     assert.strictEqual( originAbsolute.getOriginCSS(), '10px 10px 0' );
     assert.strictEqual( originAbsolute.getOriginCSS(), originPercent.getOriginCSS() );
+    assert.strictEqual( originPercentScaled.getOriginCSS(), '10px 10px 0');
+});
+
+QUnit.test( 'rotations', function( assert ) {
+    var matrix = ssc('#test'),
+        rotatedX = matrix.rotate( [ 1, 0, 0 ], Math.PI / 4 ),
+        rotatedY = matrix.rotate( [ 0, 1, 0 ], Math.PI / 2 ),
+        rotatedZ = matrix.rotate( [ 0, 0, 1 ], -Math.PI / 3 ),
+        SQRT_3 = Math.sqrt( 3 ),
+        rotatedXYZ = matrix.rotate( [ SQRT_3, SQRT_3, SQRT_3 ], -Math.PI / 6 ),
+        rotatedNonUnit = matrix.rotate( [ 2, -4, 0.6 ], 0.4242 ),
+        rotateZeroAxis = matrix.rotate( [ 0, 0, 0 ], 10 ),
+        rotateZeroAngle = matrix.rotate( [ 1, 1, 1 ], 0 );
+
+    assert.strictEqual( rotatedX.toTransformMatrix(),
+        'matrix3d(1, 0, 0, 0, 0, 0.707107, 0.707107, 0, 0, -0.707107, 0.707107, 0, 0, 0, 0, 1)' );
+
+    assert.strictEqual( rotatedY.toTransformMatrix(),
+        'matrix3d(0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1)' );
+
+    assert.strictEqual( rotatedZ.toTransformMatrix(),
+        'matrix3d(0.5, -0.866025, 0, 0, 0.866025, 0.5, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)' );
+
+    assert.strictEqual( rotatedXYZ.toTransformMatrix(),
+        'matrix3d(0.910684, -0.244017, 0.333333, 0, 0.333333, 0.910684, -0.244017, 0, ' +
+        '-0.244017, 0.333333, 0.910684, 0, 0, 0, 0, 1)' );
+
+    assert.strictEqual( rotatedNonUnit.toTransformMatrix(),
+        'matrix3d(0.928781, 0.019905, 0.370094, 0, -0.089556, 0.98102, 0.171987, 0, ' +
+        '-0.359646, -0.192883, 0.912935, 0, 0, 0, 0, 1)' );
+
+    assert.strictEqual( rotateZeroAngle.toTransformMatrix(),
+        'matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)' );
+
+    assert.strictEqual( rotateZeroAxis.toTransformMatrix(),
+        'matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)' );
 });

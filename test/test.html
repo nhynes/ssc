@@ -24,12 +24,30 @@
         background-color: lightblue;
         transform: rotate3d(0, 1, 0, 180deg);
       }
+      .marker {
+        width: 10px;
+        height: 10px;
+        position: absolute;
+        border-radius: 10px;
+      }
+      .marker.top { top: -5px; }
+      .marker.bottom { bottom: -5px; }
+      .marker.left { left: -5px; }
+      .marker.right { right: -5px; }
+      .marker.top.left { background-color: orange; }
+      .marker.top.right { background-color: purple; }
+      .marker.bottom.right { background-color: red; }
+      .marker.bottom.left { background-color: teal; }
     </style>
   </head>
   <body>
     <div id="test">
       <div class="panel front"></div>
       <div class="panel back"></div>
+      <div class="marker top left"></div>
+      <div class="marker top right"></div>
+      <div class="marker bottom right"></div>
+      <div class="marker bottom left"></div>
     </div>
     <div id="test-bg"></div>
     <div id="qunit-fixture"></div>

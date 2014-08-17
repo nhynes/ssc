@@ -4,12 +4,12 @@
   "homepage": "https://github.com/nhynes/ssc",
   "license": "MIT",
   "author": {
-      "name": "Nick Hynes",
-      "email": "nhynes@mit.edu"
+    "name": "Nick Hynes",
+    "email": "nhynes@mit.edu"
   },
   "repository": {
-      "type": "git",
-      "url": "https://github.com/nhynes/ssc"
+    "type": "git",
+    "url": "https://github.com/nhynes/ssc"
   },
   "version": "0.2.0",
   "main": "ssc.js",
@@ -17,6 +17,7 @@
     "gulp": "^3.8.7",
     "gulp-jscs": "^1.1.0",
     "gulp-jshint": "^1.8.4",
+    "gulp-plumber": "^0.6.4",
     "gulp-qunit": "^0.3.3",
     "gulp-rename": "^1.2.0",
     "gulp-uglify": "^0.3.1",
