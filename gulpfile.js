@@ -10,7 +10,8 @@ var gulp = require('gulp'),
 var path = {
     js: [ 'test/**/*.js', 'lib/ssc.js' ],
     tests: 'test/**/*',
-    src: 'lib/ssc.js'
+    src: 'lib/ssc.js',
+    lib: 'lib/'
 }
 
 gulp.task( 'default', [ 'checkstyle', 'test', 'watch' ] );
@@ -29,10 +30,10 @@ gulp.task( 'checkstyle', function() {
 });
 
 gulp.task( 'dist', [ 'checkstyle', 'test' ], function() {
-    gulp.src('ssc.js')
+    gulp.src( path.src )
         .pipe( uglify() )
         .pipe( rename({ suffix: '.min' }) )
-        .pipe( gulp.dest('lib/') );
+        .pipe( gulp.dest( path.lib ) );
 });
 
 gulp.task( 'watch', function() {
