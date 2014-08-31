@@ -16,6 +16,7 @@
     "nonew": true,
 
     "globals": {
-        "define": true
+        "define": true,
+        "module": true
     }
 }
