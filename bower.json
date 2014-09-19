@@ -1,16 +1,12 @@
 {
   "name": "ssc",
   "main": "lib/ssc.js",
-  "version": "0.2.0",
+  "version": "1.0.1",
   "homepage": "https://github.com/nhynes/ssc",
   "authors": [
     "Nick Hynes <nhynes@mit.edu>"
   ],
   "description": "A CSS 3D transformation library",
-  "moduleType": [
-    "amd",
-    "globals"
-  ],
   "keywords": [
     "css",
     "ssc",
