@@ -1,5 +1,5 @@
 {
-  "name": "SSC",
+  "name": "ssc",
   "description": "A CSS 3D transformation library",
   "homepage": "https://github.com/nhynes/ssc",
   "license": "MIT",
@@ -12,7 +12,7 @@
     "url": "https://github.com/nhynes/ssc"
   },
   "version": "1.0.1",
-  "main": "ssc.js",
+  "main": "lib/ssc.js",
   "devDependencies": {
     "gulp": "^3.8.7",
     "gulp-jscs": "^1.1.0",
